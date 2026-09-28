@@ -27,4 +27,5 @@ public interface ExpenseRepository extends JpaRepository<ExpenseEntity, Long> {
         group by c.name
         """)
     List<CategoryTotal> totalsByCategory(@Param("from") LocalDate from, @Param("to") LocalDate to);
+    boolean existsByCategoryId(Long categoryId);
 }

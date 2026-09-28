@@ -2,6 +2,7 @@ package com.anar.expensetracker.service;
 
 import com.anar.expensetracker.entity.CategoryEntity;
 import com.anar.expensetracker.repository.CategoryRepository;
+import com.anar.expensetracker.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import java.util.List;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ExpenseRepository expenseRepository;
 
     public CategoryEntity create(String name) {
         if (categoryRepository.existsByName(name)) {
@@ -35,13 +37,20 @@ public class CategoryService {
 
     public void delete(Long id) {
         var category = getById(id);
+        if (expenseRepository.existsByCategoryId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Bu kateqoriyada xərclər var, əvvəlcə onları sil");
+        }
         categoryRepository.delete(category);
     }
 
-        public CategoryEntity update(Long id, String name) {
-            var category = getById(id);
-            category.setName(name);
-            return categoryRepository.save(category);
+    public CategoryEntity update(Long id, String name) {
+        var category = getById(id);
+        if (!category.getName().equals(name) && categoryRepository.existsByName(name)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Bu kateqoriya artıq var: " + name);
         }
+        category.setName(name);
+        return categoryRepository.save(category);
+    }
     }
 
