@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Xərclərim</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root{--bg:#F3F5F9;--surface:#fff;--ink:#1C2333;--muted:#6B7488;--line:#E4E8F0;--brand:#5B5BD6;--brand-soft:#ECECFB;--danger:#D6455D;--r:18px}
+        @media (prefers-color-scheme:dark){:root{--bg:#12151F;--surface:#1B2030;--ink:#EDF0F7;--muted:#9AA3B8;--line:#2A3147;--brand:#8B8BF0;--brand-soft:#262B4A;--danger:#F0708A}}
+        *{box-sizing:border-box;margin:0}
+        body{font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;min-height:100vh}
+        .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 60px}
+        header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+        h1{font-size:1.35rem;font-weight:800;letter-spacing:-.02em}
+        h2{font-size:1rem;font-weight:700;margin-bottom:14px}
+        input,select,button{font:inherit;color:inherit}
+        input,select{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);outline:none;transition:border-color .15s}
+        input:focus,select:focus{border-color:var(--brand)}
+        button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+        .month{width:auto;font-weight:600}
+        .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+        .hero{padding:26px 26px 24px;margin-bottom:18px;background:linear-gradient(135deg,#5B5BD6 0%,#7A5CE0 55%,#B455E0 100%);color:#fff;border:none}
+        .hero small{opacity:.8;font-weight:500;font-size:.9rem}
+        .hero .big{font-size:clamp(2.4rem,7vw,3.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:4px 0 20px}
+        .bar{display:flex;height:16px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.22);gap:3px}
+        .bar span{display:block;height:100%;width:0;transition:width .7s cubic-bezier(.2,.8,.2,1);min-width:0}
+        .grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+        @media(max-width:860px){.grid{grid-template-columns:1fr}}
+        .stack{display:grid;gap:18px}
+        form{display:grid;gap:12px}
+        label{font-size:.82rem;font-weight:600;color:var(--muted);display:grid;gap:5px}
+        .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .btn{border:none;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:transform .1s,filter .15s}
+        .btn:hover{filter:brightness(1.08)}.btn:active{transform:scale(.98)}
+        .btn.soft{background:var(--brand-soft);color:var(--brand)}
+        .inline{display:flex;gap:8px}.inline input{flex:1}
+        .cats{display:grid;gap:12px}
+        .cat{display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:center;font-size:.95rem}
+        .dot{width:12px;height:12px;border-radius:50%}
+        .cat .pct{color:var(--muted);font-size:.82rem;min-width:38px;text-align:right}
+        .cat b{font-weight:700}
+        .list{display:grid}
+        .item{display:grid;grid-template-columns:42px 1fr auto auto;gap:14px;align-items:center;padding:13px 0;border-top:1px solid var(--line)}
+        .item:first-child{border-top:none}
+        .ico{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-weight:800;font-size:1rem}
+        .item .t{font-weight:600}.item .s{font-size:.82rem;color:var(--muted)}
+        .amt{font-weight:700;white-space:nowrap}
+        .del{background:none;border:none;cursor:pointer;color:var(--muted);padding:8px;border-radius:10px;font-size:1.05rem}
+        .del:hover{color:var(--danger);background:var(--brand-soft)}
+        .empty{color:var(--muted);text-align:center;padding:26px 8px;font-size:.95rem}
+        #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s;max-width:90vw;z-index:9}
+        #toast.show{opacity:1;transform:translate(-50%,0)}#toast.err{background:var(--danger);color:#fff}
+        @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <h1>Xərclərim</h1>
+        <input class="month" type="month" id="month" aria-label="Ay seç">
+    </header>
+
+    <section class="card hero" aria-live="polite">
+        <small id="monthLabel">Bu ay</small>
+        <div class="big" id="total">0.00 ₼</div>
+        <div class="bar" id="bar"></div>
+    </section>
+
+    <div class="grid">
+        <div class="stack">
+            <section class="card">
+                <h2>Xərc əlavə et</h2>
+                <form id="expForm">
+                    <label>Məbləğ (₼)<input id="amount" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="12.50" required></label>
+                    <label>Təsvir<input id="desc" type="text" maxlength="255" placeholder="Çörək, süd"></label>
+                    <div class="row2">
+                        <label>Tarix<input id="date" type="date" required></label>
+                        <label>Kateqoriya<select id="cat" required></select></label>
+                    </div>
+                    <button class="btn" type="submit">Xərci saxla</button>
+                </form>
+            </section>
+            <section class="card">
+                <h2>Yeni kateqoriya</h2>
+                <form class="inline" id="catForm">
+                    <input id="catName" maxlength="100" placeholder="Məsələn: Səhiyyə" required aria-label="Kateqoriya adı">
+                    <button class="btn soft" type="submit">Əlavə et</button>
+                </form>
+            </section>
+        </div>
+
+        <div class="stack">
+            <section class="card">
+                <h2>Kateqoriyalara görə</h2>
+                <div class="cats" id="cats"></div>
+            </section>
+            <section class="card">
+                <h2>Bu ayın xərcləri</h2>
+                <div class="list" id="list"></div>
+            </section>
+        </div>
+    </div>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+    const API = '/api/v1';
+    const COLORS = ['#5B5BD6','#12A594','#F5A524','#E5484D','#0EA5E9','#B455E0','#65A30D','#F97316'];
+    const $ = id => document.getElementById(id);
+    let cats = [];
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money = n => Number(n || 0).toLocaleString('az-AZ', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₼';
+    const colorOf = name => {
+        const i = cats.findIndex(c => c.name === name);
+        return COLORS[(i < 0 ? 0 : i) % COLORS.length];
+    };
+
+    function toast(msg, isErr) {
+        const t = $('toast');
+        t.textContent = msg;
+        t.className = 'show' + (isErr ? ' err' : '');
+        clearTimeout(toast.t);
+        toast.t = setTimeout(() => t.className = '', 3200);
+    }
+
+    async function api(path, opts = {}) {
+        const r = await fetch(API + path, {headers: {'Content-Type': 'application/json'}, ...opts});
+        if (!r.ok) {
+            let msg = 'Xəta baş verdi (' + r.status + ')';
+            try {
+                const j = await r.json();
+                if (j.fields) msg = Object.entries(j.fields).map(([k, v]) => k + ': ' + v).join(', ');
+                else if (j.message) msg = j.message;
+            } catch {}
+            throw new Error(msg);
+        }
+        return r.status === 204 ? null : r.json();
+    }
+
+    function range() {
+        const [y, m] = $('month').value.split('-').map(Number);
+        const last = new Date(y, m, 0).getDate();
+        const p = n => String(n).padStart(2, '0');
+        return {from: `${y}-${p(m)}-01`, to: `${y}-${p(m)}-${p(last)}`, y, m};
+    }
+
+    async function loadCats() {
+        cats = await api('/categories');
+        cats.sort((a, b) => a.id - b.id);
+        $('cat').innerHTML = cats.length
+            ? cats.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')
+            : '<option value="">Əvvəlcə kateqoriya yarat</option>';
+    }
+
+    async function loadMonth() {
+        const {from, to, y, m} = range();
+        const q = `?from=${from}&to=${to}`;
+        const [items, total, summary] = await Promise.all([
+            api('/expenses/range' + q), api('/expenses/total' + q), api('/expenses/summary' + q)
+        ]);
+        const months = ['Yanvar','Fevral','Mart','Aprel','May','İyun','İyul','Avqust','Sentyabr','Oktyabr','Noyabr','Dekabr'];
+        $('monthLabel').textContent = `${months[m - 1]} ${y}, ${items.length} xərc`;
+        $('total').textContent = money(total);
+
+        summary.sort((a, b) => b.total - a.total);
+        const sum = summary.reduce((s, x) => s + Number(x.total), 0) || 1;
+        $('bar').innerHTML = summary.map(s =>
+            `<span style="background:${colorOf(s.category)}" data-w="${(s.total / sum * 100).toFixed(1)}" title="${esc(s.category)}"></span>`).join('');
+        requestAnimationFrame(() => requestAnimationFrame(() =>
+            document.querySelectorAll('#bar span').forEach(el => el.style.width = el.dataset.w + '%')));
+
+        $('cats').innerHTML = summary.length ? summary.map(s => `
+    <div class="cat"><span class="dot" style="background:${colorOf(s.category)}"></span>
+      <span>${esc(s.category)}</span><b>${money(s.total)}</b>
+      <span class="pct">${Math.round(s.total / sum * 100)}%</span></div>`).join('')
+            : '<div class="empty">Bu ay hələ xərc yoxdur.</div>';
+
+        items.sort((a, b) => b.expenseDate.localeCompare(a.expenseDate) || b.id - a.id);
+        $('list').innerHTML = items.length ? items.map(e => {
+            const col = colorOf(e.category.name);
+            return `<div class="item">
+      <div class="ico" style="background:${col}22;color:${col}">${esc(e.category.name.charAt(0).toUpperCase())}</div>
+      <div><div class="t">${esc(e.description || e.category.name)}</div>
+        <div class="s">${esc(e.category.name)}, ${esc(e.expenseDate)}</div></div>
+      <div class="amt">${money(e.amount)}</div>
+      <button class="del" data-id="${e.id}" aria-label="Xərci sil" title="Sil">✕</button></div>`;
+        }).join('') : '<div class="empty">Bu ay üçün xərc yoxdur. Soldakı formadan ilk xərci əlavə et.</div>';
+    }
+
+    $('expForm').addEventListener('submit', async ev => {
+        ev.preventDefault();
+        try {
+            await api('/expenses', {method: 'POST', body: JSON.stringify({
+                    amount: Number($('amount').value),
+                    description: $('desc').value.trim() || null,
+                    expenseDate: $('date').value,
+                    categoryId: Number($('cat').value)
+                })});
+            $('amount').value = ''; $('desc').value = '';
+            toast('Xərc saxlandı');
+            await loadMonth();
+        } catch (e) { toast(e.message, true); }
+    });
+
+    $('catForm').addEventListener('submit', async ev => {
+        ev.preventDefault();
+        try {
+            await api('/categories', {method: 'POST', body: JSON.stringify({name: $('catName').value.trim()})});
+            $('catName').value = '';
+            toast('Kateqoriya əlavə olundu');
+            await loadCats();
+        } catch (e) { toast(e.message.includes('409') ? 'Bu kateqoriya artıq var' : e.message, true); }
+    });
+
+    $('list').addEventListener('click', async ev => {
+        const b = ev.target.closest('.del');
+        if (!b || !confirm('Bu xərc silinsin?')) return;
+        try { await api('/expenses/' + b.dataset.id, {method: 'DELETE'}); toast('Xərc silindi'); await loadMonth(); }
+        catch (e) { toast(e.message, true); }
+    });
+
+    $('month').addEventListener('change', () => loadMonth().catch(e => toast(e.message, true)));
+
+    (async function init() {
+        const now = new Date();
+        $('month').value = now.toLocaleDateString('sv-SE').slice(0, 7);
+        $('date').value = now.toLocaleDateString('sv-SE');
+        try { await loadCats(); await loadMonth(); }
+        catch (e) { toast('Serverə qoşulmaq olmadı. Tətbiq işləyir?', true); }
+    })();
+</script>
+</body>
+</html>
