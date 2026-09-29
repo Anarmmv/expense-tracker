@@ -42,12 +42,13 @@
         .cat .pct{color:var(--muted);font-size:.82rem;min-width:38px;text-align:right}
         .cat b{font-weight:700}
         .list{display:grid}
-        .item{display:grid;grid-template-columns:42px 1fr auto auto;gap:14px;align-items:center;padding:13px 0;border-top:1px solid var(--line)}
+        .item{display:grid;grid-template-columns:42px 1fr auto auto auto;gap:14px;align-items:center;padding:13px 0;border-top:1px solid var(--line)}
         .item:first-child{border-top:none}
         .ico{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-weight:800;font-size:1rem}
         .item .t{font-weight:600}.item .s{font-size:.82rem;color:var(--muted)}
         .amt{font-weight:700;white-space:nowrap}
         .del{background:none;border:none;cursor:pointer;color:var(--muted);padding:8px;border-radius:10px;font-size:1.05rem}
+        .del.edit:hover{color:var(--brand)}
         .del:hover{color:var(--danger);background:var(--brand-soft)}
         .empty{color:var(--muted);text-align:center;padding:26px 8px;font-size:.95rem}
         #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s;max-width:90vw;z-index:9}
@@ -79,7 +80,8 @@
                         <label>Tarix<input id="date" type="date" required></label>
                         <label>Kateqoriya<select id="cat" required></select></label>
                     </div>
-                    <button class="btn" type="submit">Xərci saxla</button>
+                    <button class="btn" id="saveBtn" type="submit">Xərci saxla</button>
+                    <button class="btn soft" id="cancel" type="button" hidden>Ləğv et</button>
                 </form>
             </section>
             <section class="card">
@@ -109,7 +111,7 @@
     const API = '/api/v1';
     const COLORS = ['#5B5BD6','#12A594','#F5A524','#E5484D','#0EA5E9','#B455E0','#65A30D','#F97316'];
     const $ = id => document.getElementById(id);
-    let cats = [];
+    let cats = [], lastItems = [], editId = null;
 
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const money = n => Number(n || 0).toLocaleString('az-AZ', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₼';
@@ -133,7 +135,7 @@
             try {
                 const j = await r.json();
                 if (j.fields) msg = Object.entries(j.fields).map(([k, v]) => k + ': ' + v).join(', ');
-                else if (j.message) msg = j.message;
+                else if (j.error) msg = j.error;
             } catch {}
             throw new Error(msg);
         }
@@ -179,6 +181,7 @@
             : '<div class="empty">Bu ay hələ xərc yoxdur.</div>';
 
         items.sort((a, b) => b.expenseDate.localeCompare(a.expenseDate) || b.id - a.id);
+        lastItems = items;
         $('list').innerHTML = items.length ? items.map(e => {
             const col = colorOf(e.category.name);
             return `<div class="item">
@@ -186,6 +189,7 @@
       <div><div class="t">${esc(e.description || e.category.name)}</div>
         <div class="s">${esc(e.category.name)}, ${esc(e.expenseDate)}</div></div>
       <div class="amt">${money(e.amount)}</div>
+      <button class="del edit" data-edit="${e.id}" aria-label="Xərci dəyiş" title="Dəyiş">✎</button>
       <button class="del" data-id="${e.id}" aria-label="Xərci sil" title="Sil">✕</button></div>`;
         }).join('') : '<div class="empty">Bu ay üçün xərc yoxdur. Soldakı formadan ilk xərci əlavə et.</div>';
     }
@@ -193,14 +197,15 @@
     $('expForm').addEventListener('submit', async ev => {
         ev.preventDefault();
         try {
-            await api('/expenses', {method: 'POST', body: JSON.stringify({
-                    amount: Number($('amount').value),
-                    description: $('desc').value.trim() || null,
-                    expenseDate: $('date').value,
-                    categoryId: Number($('cat').value)
-                })});
-            $('amount').value = ''; $('desc').value = '';
-            toast('Xərc saxlandı');
+            const body = JSON.stringify({
+                amount: Number($('amount').value),
+                description: $('desc').value.trim() || null,
+                expenseDate: $('date').value,
+                categoryId: Number($('cat').value)
+            });
+            await api(editId ? '/expenses/' + editId : '/expenses', {method: editId ? 'PUT' : 'POST', body});
+            toast(editId ? 'Xərc yeniləndi' : 'Xərc saxlandı');
+            resetForm();
             await loadMonth();
         } catch (e) { toast(e.message, true); }
     });
@@ -212,15 +217,31 @@
             $('catName').value = '';
             toast('Kateqoriya əlavə olundu');
             await loadCats();
-        } catch (e) { toast(e.message.includes('409') ? 'Bu kateqoriya artıq var' : e.message, true); }
+        } catch (e) { toast(e.message, true); }
     });
 
     $('list').addEventListener('click', async ev => {
-        const b = ev.target.closest('.del');
+        const ed = ev.target.closest('[data-edit]');
+        if (ed) return startEdit(Number(ed.dataset.edit));
+        const b = ev.target.closest('[data-id]');
         if (!b || !confirm('Bu xərc silinsin?')) return;
         try { await api('/expenses/' + b.dataset.id, {method: 'DELETE'}); toast('Xərc silindi'); await loadMonth(); }
         catch (e) { toast(e.message, true); }
     });
+
+    function resetForm() {
+        editId = null; $('amount').value = ''; $('desc').value = '';
+        $('saveBtn').textContent = 'Xərci saxla'; $('cancel').hidden = true;
+    }
+    function startEdit(id) {
+        const e = lastItems.find(x => x.id === id);
+        if (!e) return;
+        editId = id; $('amount').value = e.amount; $('desc').value = e.description || '';
+        $('date').value = e.expenseDate; $('cat').value = e.category.id;
+        $('saveBtn').textContent = 'Dəyişikliyi saxla'; $('cancel').hidden = false;
+        $('amount').focus(); window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    $('cancel').addEventListener('click', resetForm);
 
     $('month').addEventListener('change', () => loadMonth().catch(e => toast(e.message, true)));
 
